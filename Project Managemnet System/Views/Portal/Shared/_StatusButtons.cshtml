@@ -1,0 +1,29 @@
+@model TodoItem
+@{
+    var access = (ProjectPermission)ViewData["Access"]!;
+    var returnUrl = ViewData["ReturnUrl"] as string;
+    var compact = ViewData["Compact"] is true;
+    var t = Model;
+    var size = compact ? "btn-sm" : "";
+
+    // Which moves this person may make from the current status.
+    // The usual next steps; the board allows any move in AllowedMoves.
+    var allowed = access.AllowedMoves(t);
+    var moves = new List<(TodoStatus To, string Label, string Icon, string Css)>();
+    if (t.Status == TodoStatus.Incomplete && allowed.Contains(TodoStatus.Completed))
+        moves.Add((TodoStatus.Completed, "Mark complete", "bi-check2-circle", "btn-success"));
+    if (t.Status == TodoStatus.Completed && allowed.Contains(TodoStatus.Finished))
+        moves.Add((TodoStatus.Finished, "Finish", "bi-flag", "btn-primary"));
+    if (t.Status != TodoStatus.Incomplete && allowed.Contains(TodoStatus.Incomplete))
+        moves.Add((TodoStatus.Incomplete, "Reopen", "bi-arrow-counterclockwise", "btn-outline-secondary"));
+}
+@foreach (var m in moves)
+{
+    <form method="post" asp-controller="Todos" asp-action="SetStatus" asp-route-id="@t.Id" class="d-inline">
+        <input type="hidden" name="status" value="@m.To" />
+        @if (!string.IsNullOrEmpty(returnUrl)) { <input type="hidden" name="returnUrl" value="@returnUrl" /> }
+        <button type="submit" class="btn @size @m.Css" title="@m.Label">
+            <i class="bi @m.Icon"></i>@if (!compact) { <span class="ms-1">@m.Label</span> }
+        </button>
+    </form>
+}

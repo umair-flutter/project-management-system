@@ -1,0 +1,67 @@
+@model MyTodosVm
+@{
+    ViewData["Title"] = "My to-dos";
+    var tabs = Project_Managemnet_System.Controllers.Shared.MyTodosControllerBase.Tabs;
+}
+<div class="mb-4">
+    <h1 class="pm-page-title">My to-dos</h1>
+    <p class="pm-page-sub">Everything assigned to you, across all your active projects.</p>
+</div>
+
+<div class="pm-card">
+    <nav class="pm-tabs" aria-label="My to-do lists">
+        @foreach (var (key, label) in tabs)
+        {
+            <a class="@(Model.Filter == key ? "active" : "")" asp-action="Index" asp-route-filter="@key" asp-route-priority="@Model.Priority">@label<span class="count">@Model.Counts[key]</span></a>
+        }
+    </nav>
+    <form method="get" class="d-flex gap-2 p-3 border-bottom">
+        <input type="hidden" name="filter" value="@Model.Filter" />
+        <select name="priority" class="form-select" style="width:auto" onchange="this.form.submit()" aria-label="Priority">
+            <option value="">All priorities</option>
+            @foreach (var pr in new[] { TodoPriority.High, TodoPriority.Medium, TodoPriority.Low })
+            {
+                <option value="@pr" selected="@(Model.Priority == pr)">@pr priority</option>
+            }
+        </select>
+    </form>
+
+    @if (Model.Todos.Count == 0)
+    {
+        <div class="pm-empty"><i class="bi bi-cup-hot"></i>@(Model.Filter == "open" ? "Nothing open on your plate." : "No to-dos in this list.")</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table pm-table">
+                <thead><tr><th>To-do</th><th>Project</th><th>Type</th><th>Priority</th><th>Due</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var t in Model.Todos)
+                    {
+                        <tr>
+                            <td style="min-width:220px">
+                                <a class="pm-todo-title @(t.Status != TodoStatus.Incomplete ? "done" : "")" asp-controller="Todos" asp-action="Details" asp-route-id="@t.Id">@t.Title</a>
+                                @if (t.Comments.Count > 0) { <span class="text-muted small ms-2"><i class="bi bi-chat-left-text"></i> @t.Comments.Count</span> }
+                            </td>
+                            <td><a asp-controller="Projects" asp-action="Details" asp-route-id="@t.ProjectId">@t.Project?.Name</a></td>
+                            <td><span class="badge @Ui.TypeBadge(t.Type)"><i class="bi @Ui.TypeIcon(t.Type) me-1"></i>@t.Type</span></td>
+                            <td><span class="badge @Ui.PriorityBadge(t.Priority)">@t.Priority</span></td>
+                            <td class="text-nowrap @(Ui.IsOverdue(t) ? "pm-overdue" : "")">@(t.DueDate?.ToString("dd MMM yyyy") ?? "—")</td>
+                            <td><span class="badge @Ui.StatusBadge(t.Status)">@Ui.StatusLabel(t.Status)</span></td>
+                            <td class="text-end text-nowrap">
+                                @if (t.Status == TodoStatus.Incomplete)
+                                {
+                                    <form method="post" asp-controller="Todos" asp-action="SetStatus" asp-route-id="@t.Id" class="d-inline">
+                                        <input type="hidden" name="status" value="@TodoStatus.Completed" />
+                                        <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                                        <button class="btn btn-sm btn-success" type="submit" title="Mark complete"><i class="bi bi-check2-circle"></i></button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

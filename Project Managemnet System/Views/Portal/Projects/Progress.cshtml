@@ -1,0 +1,13 @@
+@model ActivityFeedVm
+@{
+    var a = Model.Access!;
+    ViewData["Title"] = "Progress · " + a.Project.Name;
+}
+<partial name="_ProjectHeader" model="a" view-data='new ViewDataDictionary(ViewData) { { "Section", "progress" } }' />
+
+<div class="pm-card">
+    <div class="pm-card-header"><h2>Progress report</h2><small class="text-muted">Everything that has happened in this project</small></div>
+    <div class="pm-card-body pt-2">
+        <partial name="_ActivityFeed" model="Model" />
+    </div>
+</div>

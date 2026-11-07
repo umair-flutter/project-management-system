@@ -1,0 +1,70 @@
+@model ProjectPermission
+@{
+    var p = Model.Project;
+    var current = ViewData["Section"] as string ?? "todos";
+    var people = ProjectAccess.Assignables(p);
+}
+<div class="pm-card mb-3">
+    <div class="pm-card-body d-flex flex-wrap gap-3 align-items-center">
+        <partial name="_ProjectIcon" model="p" view-data='new ViewDataDictionary(ViewData) { { "Size", "pm-project-icon-lg" } }' />
+        <div class="flex-grow-1 min-w-0">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <h1 class="pm-page-title text-truncate">@p.Name</h1>
+                @if (p.IsArchived) { <span class="badge badge-soft-secondary">Archived</span> }
+                @if (Model.CanManage && !Model.CanEditSettings) { <span class="badge badge-soft-primary">You're a project admin</span> }
+            </div>
+            <p class="pm-page-sub mb-0">Owner: @p.Owner?.FullName · Created @p.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</p>
+        </div>
+        <div class="pm-avatar-stack me-2">
+            @foreach (var u in people.Take(6)) { <partial name="_Avatar" model="u" /> }
+        </div>
+        @if (Model.CanEditSettings)
+        {
+            <div class="dropdown">
+                <button class="btn btn-light" data-bs-toggle="dropdown" aria-label="Project actions"><i class="bi bi-three-dots"></i></button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    @if (!p.IsArchived)
+                    {
+                        <li><a class="dropdown-item" asp-controller="Projects" asp-action="Edit" asp-route-id="@p.Id"><i class="bi bi-pencil me-2"></i>Edit project</a></li>
+                    }
+                    <li>
+                        <form method="post" asp-controller="Projects" asp-action="Archive" asp-route-id="@p.Id"
+                              onsubmit="return @(p.IsArchived ? "true" : "confirm('Archive this project? It becomes read-only and moves to Archived projects. You can restore it later.')");">
+                            <input type="hidden" name="archive" value="@(p.IsArchived ? "false" : "true")" />
+                            <button class="dropdown-item" type="submit">
+                                @if (p.IsArchived) { <i class="bi bi-arrow-counterclockwise me-2"></i><text>Restore project</text> }
+                                else { <i class="bi bi-archive me-2"></i><text>Archive project</text> }
+                            </button>
+                        </form>
+                    </li>
+                    <li><hr class="dropdown-divider" /></li>
+                    <li>
+                        <form method="post" asp-controller="Projects" asp-action="Delete" asp-route-id="@p.Id"
+                              onsubmit="return confirm('Delete this project with all its to-dos, comments, and files? This cannot be undone.');">
+                            <button class="dropdown-item text-danger" type="submit"><i class="bi bi-trash me-2"></i>Delete project</button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        }
+    </div>
+    @if (!string.IsNullOrWhiteSpace(p.Description) && current == "todos")
+    {
+        <div class="px-4 pb-3 text-muted" style="white-space:pre-wrap">@p.Description</div>
+    }
+    <nav class="pm-tabs">
+        <a class="@(current == "todos" ? "active" : "")" asp-controller="Projects" asp-action="Details" asp-route-id="@p.Id"><i class="bi bi-list-check me-1"></i>To-dos</a>
+        <a class="@(current == "board" ? "active" : "")" asp-controller="Projects" asp-action="Board" asp-route-id="@p.Id"><i class="bi bi-kanban me-1"></i>Board</a>
+        <a class="@(current == "members" ? "active" : "")" asp-controller="Projects" asp-action="Members" asp-route-id="@p.Id"><i class="bi bi-people me-1"></i>Team<span class="count">@people.Count</span></a>
+        <a class="@(current == "files" ? "active" : "")" asp-controller="Projects" asp-action="Files" asp-route-id="@p.Id"><i class="bi bi-paperclip me-1"></i>Files</a>
+        <a class="@(current == "progress" ? "active" : "")" asp-controller="Projects" asp-action="Progress" asp-route-id="@p.Id"><i class="bi bi-activity me-1"></i>Progress</a>
+        <a asp-controller="Calendar" asp-action="Index" asp-route-projectId="@p.Id"><i class="bi bi-calendar3 me-1"></i>Calendar</a>
+    </nav>
+</div>
+@if (p.IsArchived)
+{
+    <div class="alert alert-secondary d-flex align-items-center gap-2">
+        <i class="bi bi-archive"></i>
+        <span>Archived on @p.ArchivedAt?.ToLocalTime().ToString("dd MMM yyyy"). This project is read-only@(Model.CanEditSettings ? "; restore it from the ⋯ menu to make changes" : "").</span>
+    </div>
+}

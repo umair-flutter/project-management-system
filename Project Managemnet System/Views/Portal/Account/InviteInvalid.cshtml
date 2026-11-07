@@ -1,0 +1,10 @@
+@{
+    Layout = "/Views/Shared/_AuthLayout.cshtml";
+    ViewData["Title"] = "Invitation not valid";
+}
+<div class="text-center">
+    <div class="pm-stat-icon tint-amber mx-auto mb-3"><i class="bi bi-envelope-exclamation"></i></div>
+    <h2 class="fw-bold mb-2">This invitation isn't valid</h2>
+    <p class="text-muted">It may have expired (invitations last 14 days), been cancelled, or already been used. Ask the person who invited you to send a new one.</p>
+    <a class="btn btn-primary w-100 mt-2" asp-action="Login">Go to sign in</a>
+</div>

@@ -1,0 +1,12 @@
+@model Project
+@{
+    var size = ViewData["Size"] as string ?? "";
+}
+@if (!string.IsNullOrEmpty(Model.IconPath))
+{
+    <img src="@Model.IconPath" alt="" class="pm-project-icon @size" />
+}
+else
+{
+    <span class="pm-project-icon placeholder @size" style="background:@Ui.AvatarColor(Model.Name)">@Ui.Initials(Model.Name)</span>
+}

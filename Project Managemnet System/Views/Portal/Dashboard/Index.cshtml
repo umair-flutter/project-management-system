@@ -1,0 +1,172 @@
+@model DashboardVm
+@{
+    ViewData["Title"] = "Dashboard";
+    var totalTodos = Model.Unassigned + Model.Incomplete + Model.Completed + Model.Finished;
+}
+<div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+    <div>
+        <h1 class="pm-page-title">Dashboard</h1>
+        <p class="pm-page-sub">An overview of your projects, tasks, and bugs.</p>
+    </div>
+    <a class="btn btn-outline-secondary" asp-controller="Projects" asp-action="Index"><i class="bi bi-folder2-open me-1"></i> View projects</a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3">
+        <div class="pm-card pm-stat">
+            <div class="pm-stat-icon tint-indigo"><i class="bi bi-folder2"></i></div>
+            <div><div class="pm-stat-value">@Model.ProjectCount</div><div class="pm-stat-label">Projects</div></div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="pm-card pm-stat">
+            <div class="pm-stat-icon tint-cyan"><i class="bi bi-check2-square"></i></div>
+            <div><div class="pm-stat-value">@Model.TaskCount</div><div class="pm-stat-label">Tasks</div></div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="pm-card pm-stat">
+            <div class="pm-stat-icon tint-rose"><i class="bi bi-bug"></i></div>
+            <div><div class="pm-stat-value">@Model.BugCount</div><div class="pm-stat-label">Bugs</div></div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="pm-card pm-stat">
+            <div class="pm-stat-icon tint-green"><i class="bi bi-people"></i></div>
+            <div><div class="pm-stat-value">@Model.MemberCount</div><div class="pm-stat-label">Members</div></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-5">
+        <div class="pm-card h-100">
+            <div class="pm-card-header"><h2>To-do overview</h2>
+                @if (Model.Overdue > 0)
+                {
+                    <span class="badge badge-soft-danger"><i class="bi bi-alarm me-1"></i>@Model.Overdue overdue</span>
+                }
+            </div>
+            <div class="pm-card-body">
+                @if (totalTodos == 0)
+                {
+                    <div class="pm-empty"><i class="bi bi-pie-chart"></i>No to-dos yet.</div>
+                }
+                else
+                {
+                    <div class="chart-box"><canvas id="statusChart" aria-label="To-dos by status"></canvas></div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="pm-card h-100">
+            <div class="pm-card-header"><h2>Project status</h2><small class="text-muted">Done vs. open to-dos</small></div>
+            <div class="pm-card-body">
+                @if (Model.ProjectProgress.Count == 0)
+                {
+                    <div class="pm-empty"><i class="bi bi-bar-chart"></i>No active projects.</div>
+                }
+                else
+                {
+                    <div class="chart-box"><canvas id="projectChart" aria-label="Progress per project"></canvas></div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="pm-card">
+    <div class="pm-card-header">
+        <h2>@(Model.TopDueIsMine ? "My top due to-dos" : "Top due to-dos")</h2>
+        <small class="text-muted">Open to-dos with the nearest due date</small>
+    </div>
+    @if (Model.TopDue.Count == 0)
+    {
+        <div class="pm-empty"><i class="bi bi-calendar-check"></i>Nothing due. Nice.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table pm-table">
+                <thead><tr><th>To-do</th><th>Project</th><th>Priority</th><th>Assigned to</th><th>Due</th></tr></thead>
+                <tbody>
+                    @foreach (var t in Model.TopDue)
+                    {
+                        <tr>
+                            <td>
+                                <i class="bi @Ui.TypeIcon(t.Type) me-1 text-muted"></i>
+                                <a class="pm-todo-title" asp-controller="Todos" asp-action="Details" asp-route-id="@t.Id">@t.Title</a>
+                            </td>
+                            <td><a asp-controller="Projects" asp-action="Details" asp-route-id="@t.ProjectId">@t.Project?.Name</a></td>
+                            <td><span class="badge @Ui.PriorityBadge(t.Priority)">@t.Priority</span></td>
+                            <td>
+                                <span class="d-inline-flex align-items-center gap-2">
+                                    <partial name="_Avatar" model="t.Assignee" />
+                                    <span>@(t.Assignee?.FullName ?? "Unassigned")</span>
+                                </span>
+                            </td>
+                            <td class="@(Ui.IsOverdue(t) ? "pm-overdue" : "")">@t.DueDate?.ToString("dd MMM yyyy")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<div class="pm-card mt-4">
+    <div class="pm-card-header">
+        <h2>Recent activity</h2>
+        <a class="small" asp-controller="Progress" asp-action="Index">See all progress <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="pm-card-body pt-0">
+        <partial name="_ActivityFeed" model="Model.RecentActivity" view-data='new ViewDataDictionary(ViewData) { { "ShowProject", true }, { "NoPaging", true } }' />
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script>
+        (function () {
+            Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+            Chart.defaults.color = '#6b7280';
+
+            var status = document.getElementById('statusChart');
+            if (status) {
+                new Chart(status, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Unassigned', 'Incomplete', 'Completed', 'Finished'],
+                        datasets: [{
+                            data: [@Model.Unassigned, @Model.Incomplete, @Model.Completed, @Model.Finished],
+                            backgroundColor: ['#94a3b8', '#f59e0b', '#10b981', '#4f46e5'],
+                            borderWidth: 2, borderColor: '#fff'
+                        }]
+                    },
+                    options: { maintainAspectRatio: false, cutout: '68%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } } }
+                });
+            }
+
+            var proj = document.getElementById('projectChart');
+            if (proj) {
+                var rows = @Json.Serialize(Model.ProjectProgress);
+                new Chart(proj, {
+                    type: 'bar',
+                    data: {
+                        labels: rows.map(r => r.name.length > 22 ? r.name.slice(0, 21) + '…' : r.name),
+                        datasets: [
+                            { label: 'Done', data: rows.map(r => r.done), backgroundColor: '#4f46e5', borderRadius: 4 },
+                            { label: 'Open', data: rows.map(r => r.total - r.done), backgroundColor: '#c7d2fe', borderRadius: 4 }
+                        ]
+                    },
+                    options: {
+                        maintainAspectRatio: false, indexAxis: 'y',
+                        scales: { x: { stacked: true, ticks: { precision: 0 }, grid: { color: '#f1f5f9' } }, y: { stacked: true, grid: { display: false } } },
+                        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } }
+                    }
+                });
+            }
+        })();
+    </script>
+}

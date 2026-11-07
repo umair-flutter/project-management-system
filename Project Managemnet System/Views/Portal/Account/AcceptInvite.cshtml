@@ -1,0 +1,39 @@
+@model AcceptInviteVm
+@{
+    Layout = "/Views/Shared/_AuthLayout.cshtml";
+    ViewData["Title"] = "Join your team";
+}
+<span class="badge badge-soft-primary mb-3">Invitation</span>
+<h2 class="fw-bold mb-1">Join your team</h2>
+<p class="text-muted mb-4">
+    @(Model.InvitedBy ?? "A project owner") invited you to
+    <strong>@string.Join(", ", Model.ProjectNames)</strong>. Create your account to get started.
+</p>
+
+<form method="post" asp-action="AcceptInvite">
+    <input type="hidden" asp-for="Token" />
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+    <div class="mb-3">
+        <label class="form-label" for="inviteEmail">Email</label>
+        <input id="inviteEmail" class="form-control form-control-lg" value="@Model.Email" disabled />
+    </div>
+    <div class="mb-3">
+        <label asp-for="FullName" class="form-label"></label>
+        <input asp-for="FullName" class="form-control form-control-lg" autocomplete="name" autofocus />
+        <span asp-validation-for="FullName" class="text-danger small"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Password" class="form-label"></label>
+        <input asp-for="Password" class="form-control form-control-lg" autocomplete="new-password" />
+        <div class="form-text">At least 8 characters with upper and lower case letters, a number, and a symbol.</div>
+        <span asp-validation-for="Password" class="text-danger small"></span>
+    </div>
+    <div class="mb-4">
+        <label asp-for="ConfirmPassword" class="form-label"></label>
+        <input asp-for="ConfirmPassword" class="form-control form-control-lg" autocomplete="new-password" />
+        <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+    </div>
+    <button class="btn btn-primary btn-lg w-100" type="submit">Create account and join</button>
+</form>
+<p class="text-center small text-muted mt-4 mb-0">Already have an account? <a asp-action="Login">Sign in</a></p>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

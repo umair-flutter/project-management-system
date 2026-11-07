@@ -1,0 +1,113 @@
+@model ProjectFilesVm
+@{
+    var a = Model.Access;
+    var p = a.Project;
+    ViewData["Title"] = "Files · " + p.Name;
+    string Icon(Attachment f) => System.IO.Path.GetExtension(f.FileName).ToLowerInvariant() switch
+    {
+        ".pdf" => "bi-file-earmark-pdf text-danger",
+        ".doc" or ".docx" => "bi-file-earmark-word text-primary",
+        ".xls" or ".xlsx" or ".csv" => "bi-file-earmark-excel text-success",
+        ".ppt" or ".pptx" => "bi-file-earmark-slides text-warning",
+        ".png" or ".jpg" or ".jpeg" or ".gif" or ".webp" or ".svg" => "bi-file-earmark-image text-info",
+        ".zip" or ".rar" or ".7z" => "bi-file-earmark-zip",
+        _ => "bi-file-earmark-text",
+    };
+}
+<partial name="_ProjectHeader" model="a" view-data='new ViewDataDictionary(ViewData) { { "Section", "files" } }' />
+
+<div class="row g-3">
+    <div class="@(a.IsReadOnly ? "col-12" : "col-xl-8")">
+        <div class="pm-card mb-3">
+            <div class="pm-card-header">
+                <h2>Project documents <span class="text-muted fw-normal">(@Model.Documents.Count)</span></h2>
+                <small class="text-muted">Specs, flowcharts, process docs</small>
+            </div>
+            @if (Model.Documents.Count == 0)
+            {
+                <div class="pm-empty"><i class="bi bi-folder2"></i>No documents yet.@(a.IsReadOnly ? "" : " Upload the first one on the right.")</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table pm-table">
+                        <thead><tr><th>File</th><th>Size</th><th>Uploaded by</th><th>Date</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (var f in Model.Documents)
+                            {
+                                <tr>
+                                    <td style="min-width:220px">
+                                        <i class="bi @Icon(f) me-2 fs-5 align-middle"></i>
+                                        <a href="@Url.Action("Download", "Attachments", new { area = "", id = f.Id })" class="fw-semibold">@f.FileName</a>
+                                    </td>
+                                    <td class="text-nowrap">@Ui.FileSize(f.Size)</td>
+                                    <td class="text-nowrap">@f.UploadedBy?.FullName</td>
+                                    <td class="text-nowrap">@f.UploadedAt.ToLocalTime().ToString("dd MMM yyyy")</td>
+                                    <td class="text-end">
+                                        @if (!a.IsReadOnly && (a.CanManage || f.UploadedById == a.UserId))
+                                        {
+                                            <form method="post" asp-action="DeleteFile" asp-route-id="@p.Id" class="d-inline" onsubmit="return confirm('Delete this file?');">
+                                                <input type="hidden" name="fileId" value="@f.Id" />
+                                                <button class="btn btn-sm btn-outline-danger" type="submit" title="Delete file"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+
+        <div class="pm-card">
+            <div class="pm-card-header">
+                <h2>Files on to-dos <span class="text-muted fw-normal">(@Model.TodoFiles.Count)</span></h2>
+                <small class="text-muted">Attached to tasks, bugs, and comments</small>
+            </div>
+            @if (Model.TodoFiles.Count == 0)
+            {
+                <div class="pm-empty"><i class="bi bi-paperclip"></i>No files attached to to-dos yet.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table pm-table">
+                        <thead><tr><th>File</th><th>To-do</th><th>Size</th><th>Uploaded by</th><th>Date</th></tr></thead>
+                        <tbody>
+                            @foreach (var f in Model.TodoFiles)
+                            {
+                                <tr>
+                                    <td style="min-width:200px">
+                                        <i class="bi @Icon(f) me-2 fs-5 align-middle"></i>
+                                        <a href="@Url.Action("Download", "Attachments", new { area = "", id = f.Id })" class="fw-semibold">@f.FileName</a>
+                                    </td>
+                                    <td><a asp-controller="Todos" asp-action="Details" asp-route-id="@f.TodoItemId">@f.TodoItem?.Title</a></td>
+                                    <td class="text-nowrap">@Ui.FileSize(f.Size)</td>
+                                    <td class="text-nowrap">@f.UploadedBy?.FullName</td>
+                                    <td class="text-nowrap">@f.UploadedAt.ToLocalTime().ToString("dd MMM yyyy")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (!a.IsReadOnly)
+    {
+        <div class="col-xl-4">
+            <div class="pm-card">
+                <div class="pm-card-header"><h2>Upload documents</h2></div>
+                <div class="pm-card-body">
+                    <form method="post" enctype="multipart/form-data" asp-action="UploadFiles" asp-route-id="@p.Id">
+                        <input type="file" name="documents" multiple class="form-control mb-2" aria-label="Choose files" />
+                        <div class="form-text mb-3">Up to 20 MB per file. Everyone on the team can see and download these.</div>
+                        <button class="btn btn-primary w-100" type="submit"><i class="bi bi-cloud-upload me-1"></i>Upload</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+</div>

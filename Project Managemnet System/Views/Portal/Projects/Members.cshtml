@@ -1,0 +1,137 @@
+@model ProjectMembersVm
+@{
+    var a = Model.Access;
+    var p = a.Project;
+    ViewData["Title"] = "Team · " + p.Name;
+    var members = p.Members.Where(m => m.User is not null).OrderByDescending(m => m.IsProjectAdmin).ThenBy(m => m.User!.FullName).ToList();
+}
+<partial name="_ProjectHeader" model="a" view-data='new ViewDataDictionary(ViewData) { { "Section", "members" } }' />
+
+<div class="row g-3">
+    <div class="@(a.CanManage ? "col-lg-8" : "col-12")">
+        <div class="pm-card">
+            <div class="pm-card-header"><h2>Team members</h2></div>
+            <div class="table-responsive">
+                <table class="table pm-table">
+                    <thead><tr><th>Name</th><th>Role in project</th><th>Open to-dos</th><th class="text-end"><span class="visually-hidden">Actions</span></th></tr></thead>
+                    <tbody>
+                        @if (p.Owner is not null)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <partial name="_Avatar" model="p.Owner" />
+                                        <div><div class="fw-semibold">@p.Owner.FullName</div><small class="text-muted">@p.Owner.Email</small></div>
+                                    </div>
+                                </td>
+                                <td><span class="badge badge-soft-warning">Owner</span></td>
+                                <td>@Model.OpenTodosByUser.GetValueOrDefault(p.OwnerId)</td>
+                                <td></td>
+                            </tr>
+                        }
+                        @foreach (var m in members)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <partial name="_Avatar" model="m.User" />
+                                        <div>
+                                            <div class="fw-semibold">@m.User!.FullName @if (!m.User.IsActive) { <span class="badge badge-soft-secondary ms-1">Inactive</span> }</div>
+                                            <small class="text-muted">@m.User.Email</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (m.IsProjectAdmin) { <span class="badge badge-soft-primary">Project admin</span> }
+                                    else { <span class="badge badge-soft-secondary">Member</span> }
+                                </td>
+                                <td>@Model.OpenTodosByUser.GetValueOrDefault(m.UserId)</td>
+                                <td class="text-end text-nowrap">
+                                    @if (a.CanEditSettings)
+                                    {
+                                        <form method="post" asp-action="ToggleProjectAdmin" asp-route-id="@p.Id" class="d-inline">
+                                            <input type="hidden" name="userId" value="@m.UserId" />
+                                            <button class="btn btn-sm btn-light" type="submit">@(m.IsProjectAdmin ? "Remove admin" : "Make project admin")</button>
+                                        </form>
+                                    }
+                                    @if (a.CanManage && (a.CanEditSettings || !m.IsProjectAdmin) && m.UserId != a.UserId)
+                                    {
+                                        <form method="post" asp-action="RemoveMember" asp-route-id="@p.Id" class="d-inline"
+                                              onsubmit="return confirm('Remove this person from the project? Their open to-dos become unassigned.');">
+                                            <input type="hidden" name="userId" value="@m.UserId" />
+                                            <button class="btn btn-sm btn-outline-danger" type="submit" title="Remove from project"><i class="bi bi-person-dash"></i></button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (members.Count == 0)
+            {
+                <div class="pm-empty pt-0"><i class="bi bi-people"></i>Only the owner is on this project so far.</div>
+            }
+        </div>
+
+        @if (Model.Invitations.Count > 0)
+        {
+            <div class="pm-card mt-3">
+                <div class="pm-card-header"><h2>Pending invitations</h2><small class="text-muted">They join when they create an account from the emailed link (or an admin creates one for them).</small></div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var inv in Model.Invitations)
+                    {
+                        <li class="list-group-item d-flex flex-wrap gap-2 align-items-center justify-content-between">
+                            <span>
+                                <i class="bi bi-envelope me-2 text-muted"></i>@inv.Email
+                                @if (inv.IsProjectAdmin) { <span class="badge badge-soft-primary ms-1">Project admin</span> }
+                                <small class="d-block text-muted ms-4">
+                                    @if (inv.EmailedAt is null) { <text>Sending…</text> }
+                                    else if (inv.IsExpired) { <span class="text-danger">Link expired; resend it</span> }
+                                    else { <text>Emailed @inv.EmailedAt.Value.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</text> }
+                                </small>
+                            </span>
+                            @if (a.CanManage)
+                            {
+                                <span class="d-flex gap-1">
+                                    <form method="post" asp-action="ResendInvite" asp-route-id="@p.Id">
+                                        <input type="hidden" name="inviteId" value="@inv.Id" />
+                                        <button class="btn btn-sm btn-light" type="submit"><i class="bi bi-send me-1"></i>Resend</button>
+                                    </form>
+                                    <form method="post" asp-action="CancelInvite" asp-route-id="@p.Id">
+                                        <input type="hidden" name="inviteId" value="@inv.Id" />
+                                        <button class="btn btn-sm btn-light" type="submit">Cancel</button>
+                                    </form>
+                                </span>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+
+    @if (a.CanManage)
+    {
+        <div class="col-lg-4">
+            <div class="pm-card">
+                <div class="pm-card-header"><h2>Add people</h2></div>
+                <div class="pm-card-body">
+                    <form method="post" asp-action="AddMembers" asp-route-id="@p.Id">
+                        <label asp-for="Emails" class="form-label"></label>
+                        <textarea asp-for="Emails" name="emails" class="form-control mb-2" rows="4" placeholder="one@example.com, two@example.com"></textarea>
+                        @if (a.CanEditSettings)
+                        {
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="asProjectAdmin" value="true" id="asProjectAdmin" />
+                                <label class="form-check-label" for="asProjectAdmin">Make them project admins</label>
+                            </div>
+                        }
+                        <button class="btn btn-primary w-100" type="submit"><i class="bi bi-person-plus me-1"></i>Add to project</button>
+                    </form>
+                    <p class="form-text mb-0 mt-3">Project admins can add and assign to-dos and manage the team, but can't edit or delete the project.</p>
+                </div>
+            </div>
+        </div>
+    }
+</div>

@@ -1,0 +1,25 @@
+@model ActivityFeedVm
+@{
+    ViewData["Title"] = "Progress";
+}
+<div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+    <div>
+        <h1 class="pm-page-title">Progress</h1>
+        <p class="pm-page-sub">What has been happening across your projects.</p>
+    </div>
+    <form method="get">
+        <select name="projectId" class="form-select" onchange="this.form.submit()" aria-label="Project">
+            <option value="">All projects</option>
+            @foreach (var p in Model.Projects)
+            {
+                <option value="@p.Id" selected="@(Model.ProjectId == p.Id)">@p.Name@(p.IsArchived ? " (archived)" : "")</option>
+            }
+        </select>
+    </form>
+</div>
+
+<div class="pm-card" style="max-width:900px">
+    <div class="pm-card-body pt-2">
+        <partial name="_ActivityFeed" model="Model" view-data='new ViewDataDictionary(ViewData) { { "ShowProject", Model.ProjectId is null } }' />
+    </div>
+</div>

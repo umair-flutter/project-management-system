@@ -1,0 +1,90 @@
+@model ProjectListVm
+@{
+    ViewData["Title"] = Model.Archived ? "Archived projects" : "Projects";
+    var kind = Model.Archived ? "archived" : "active";
+}
+<div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+    <div>
+        <h1 class="pm-page-title">@ViewData["Title"]</h1>
+        <p class="pm-page-sub">@Model.Projects.Count @kind project@(Model.Projects.Count == 1 ? "" : "s")@(Model.Archived ? ". Archived projects are read-only." : "")</p>
+    </div>
+    <div class="d-flex gap-2">
+        <form method="get" class="d-flex" role="search">
+            <input name="q" value="@Model.Query" class="form-control" placeholder="Search projects" aria-label="Search projects" />
+        </form>
+        @if (Model.CanCreate)
+        {
+            <a class="btn btn-primary text-nowrap" asp-action="Create"><i class="bi bi-plus-lg me-1"></i> Add new project</a>
+        }
+    </div>
+</div>
+
+@if (Model.Projects.Count == 0)
+{
+    <div class="pm-card pm-empty">
+        <i class="bi bi-folder-x"></i>
+        @if (!string.IsNullOrEmpty(Model.Query))
+        {
+            <text>No projects match "@Model.Query".</text>
+        }
+        else if (Model.Archived)
+        {
+            <text>No archived projects. Owners can archive a finished project from its ⋯ menu.</text>
+        }
+        else if (Model.CanCreate)
+        {
+            <text>No projects yet. <a asp-action="Create">Create your first project.</a></text>
+        }
+        else
+        {
+            <text>You haven't been added to any projects yet.</text>
+        }
+    </div>
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var c in Model.Projects)
+        {
+            <div class="col-md-6 col-xxl-4">
+                <div class="pm-card pm-project-card position-relative">
+                    <div class="pm-card-body d-flex gap-3 align-items-start">
+                        <partial name="_ProjectIcon" model="c.Project" />
+                        <div class="flex-grow-1 min-w-0">
+                            <a class="stretched-link fw-semibold text-body fs-6 d-block text-truncate" asp-action="Details" asp-route-id="@c.Project.Id">@c.Project.Name</a>
+                            <small class="text-muted">Owner: @c.Project.Owner?.FullName</small>
+                            @if (c.Project.IsArchived)
+                            {
+                                <small class="text-muted d-block">Archived @c.Project.ArchivedAt?.ToLocalTime().ToString("dd MMM yyyy")</small>
+                            }
+                        </div>
+                    </div>
+                    <div class="px-4 pb-3 text-muted small" style="min-height:2.6rem">
+                        @(string.IsNullOrWhiteSpace(c.Project.Description) ? "No description." :
+                            c.Project.Description.Length > 110 ? c.Project.Description[..110] + "…" : c.Project.Description)
+                    </div>
+                    <div class="px-4 pb-3">
+                        <div class="d-flex justify-content-between small mb-1"><span class="text-muted">Progress</span><span class="fw-semibold">@c.Percent%</span></div>
+                        <div class="progress"><div class="progress-bar" style="width:@c.Percent%"></div></div>
+                    </div>
+                    <div class="mt-auto border-top px-4 py-3 d-flex align-items-center justify-content-between gap-2">
+                        <div class="d-flex gap-3 small">
+                            <span title="Tasks done / total"><i class="bi bi-check2-square text-info me-1"></i>@c.TaskDone/@c.TaskTotal</span>
+                            <span title="Bugs done / total"><i class="bi bi-bug text-danger me-1"></i>@c.BugDone/@c.BugTotal</span>
+                        </div>
+                        <div class="pm-avatar-stack" title="@c.People.Count member(s)">
+                            @foreach (var u in c.People.Take(5))
+                            {
+                                <partial name="_Avatar" model="u" />
+                            }
+                            @if (c.People.Count > 5)
+                            {
+                                <span class="pm-avatar" style="background:#94a3b8">+@(c.People.Count - 5)</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

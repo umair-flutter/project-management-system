@@ -1,0 +1,64 @@
+@model MemberFormVm
+@{
+    var isEdit = Model.Id is not null;
+    ViewData["Title"] = isEdit ? "Edit member" : "Add member";
+}
+<div class="mb-4">
+    <a class="small" asp-action="Index"><i class="bi bi-arrow-left"></i> Members</a>
+    <h1 class="pm-page-title mt-1">@ViewData["Title"]</h1>
+</div>
+
+<div class="pm-card" style="max-width:640px">
+    <div class="pm-card-body">
+        <form method="post" asp-action="@(isEdit ? "Edit" : "Create")" asp-route-id="@Model.Id">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            <div class="mb-3">
+                <label asp-for="FullName" class="form-label"></label>
+                <input asp-for="FullName" class="form-control" />
+                <span asp-validation-for="FullName" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" autocomplete="off" />
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label">@(isEdit ? "New password" : "Starting password (optional)")</label>
+                <input asp-for="Password" class="form-control" autocomplete="new-password" />
+                <div class="form-text">
+                    @(isEdit ? "Leave blank to keep the current password, or email them a reset link below. "
+                             : "Leave blank and we'll email them a link to choose their own password. ")At least 8 characters with upper and lower case letters, a number, and a symbol.
+                </div>
+                <span asp-validation-for="Password" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Role" class="form-label"></label>
+                <select asp-for="Role" class="form-select">
+                    @foreach (var r in Model.AllowedRoles)
+                    {
+                        <option value="@r">@(r == Roles.SuperAdmin ? "Super Admin – access to every project" : r == Roles.Admin ? "Admin – creates and owns projects" : "Developer – works on assigned projects")</option>
+                    }
+                </select>
+                <span asp-validation-for="Role" class="text-danger small"></span>
+            </div>
+            <div class="form-check form-switch mb-4">
+                <input asp-for="IsActive" class="form-check-input" role="switch" />
+                <label asp-for="IsActive" class="form-check-label"></label>
+                <div class="form-text">Inactive accounts can't sign in. Their history stays in the projects.</div>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" type="submit">@(isEdit ? "Save changes" : "Create account")</button>
+                <a class="btn btn-light" asp-action="Index">Cancel</a>
+            </div>
+        </form>
+        @if (isEdit)
+        {
+            <hr class="my-4" />
+            <form method="post" asp-action="SendPasswordReset" asp-route-id="@Model.Id" class="d-flex flex-wrap align-items-center gap-3">
+                <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-envelope me-1"></i>Email a password reset link</button>
+                <span class="form-text m-0">They choose their own new password; you never see it.</span>
+            </form>
+        }
+    </div>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

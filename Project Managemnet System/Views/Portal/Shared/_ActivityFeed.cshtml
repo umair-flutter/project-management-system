@@ -1,0 +1,57 @@
+@model ActivityFeedVm
+@{
+    var showProject = ViewData["ShowProject"] is true;
+    var today = DateTime.Now.Date;
+    string DayLabel(DateTime d) => d == today ? "Today" : d == today.AddDays(-1) ? "Yesterday" : d.ToString("dddd, dd MMM yyyy");
+}
+@if (Model.Items.Count == 0)
+{
+    <div class="pm-empty"><i class="bi bi-activity"></i>Nothing has happened here yet.</div>
+}
+else
+{
+    foreach (var day in Model.Items.GroupBy(i => i.CreatedAt.ToLocalTime().Date))
+    {
+        <div class="pm-feed-day">@DayLabel(day.Key)</div>
+        <ul class="pm-feed">
+            @foreach (var item in day)
+            {
+                <li class="pm-feed-item">
+                    <partial name="_Avatar" model="item.User" />
+                    <div class="flex-grow-1 min-w-0">
+                        <div>
+                            <span class="fw-semibold">@item.User?.FullName</span>
+                            @if (item.TodoItemId is { } tid && Model.LiveTodoIds.Contains(tid))
+                            {
+                                <a class="text-body" asp-controller="Todos" asp-action="Details" asp-route-id="@tid">@item.Message</a>
+                            }
+                            else
+                            {
+                                <span>@item.Message</span>
+                            }
+                        </div>
+                        <small class="text-muted">
+                            @item.CreatedAt.ToLocalTime().ToString("HH:mm")
+                            @if (showProject && item.Project is not null)
+                            {
+                                <text> · </text><a asp-controller="Projects" asp-action="Progress" asp-route-id="@item.ProjectId">@item.Project.Name</a>
+                            }
+                        </small>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+    if (ViewData["NoPaging"] is true) { return; }
+    <div class="d-flex justify-content-between pt-2">
+        @if (Model.Page > 1)
+        {
+            <a class="btn btn-light btn-sm" href="@Url.Action(null, new { id = ViewContext.RouteData.Values["id"], projectId = Model.ProjectId, page = Model.Page - 1 })"><i class="bi bi-arrow-left"></i> Newer</a>
+        }
+        else { <span></span> }
+        @if (Model.HasMore)
+        {
+            <a class="btn btn-light btn-sm" href="@Url.Action(null, new { id = ViewContext.RouteData.Values["id"], projectId = Model.ProjectId, page = Model.Page + 1 })">Older <i class="bi bi-arrow-right"></i></a>
+        }
+    </div>
+}

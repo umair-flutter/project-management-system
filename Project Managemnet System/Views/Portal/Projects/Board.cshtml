@@ -1,0 +1,142 @@
+@model BoardVm
+@{
+    var a = Model.Access;
+    var p = a.Project;
+    ViewData["Title"] = "Board · " + p.Name;
+    (TodoStatus Status, string Label, string Hint)[] columns =
+    [
+        (TodoStatus.Incomplete, "To do", "Open work"),
+        (TodoStatus.Completed, "Completed", "Done, waiting for review"),
+        (TodoStatus.Finished, "Finished", "Reviewed and closed"),
+    ];
+}
+<partial name="_ProjectHeader" model="a" view-data='new ViewDataDictionary(ViewData) { { "Section", "board" } }' />
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
+        <select name="type" class="form-select" style="width:auto" onchange="this.form.submit()" aria-label="Type">
+            <option value="">Tasks and bugs</option>
+            <option value="@TodoType.Task" selected="@(Model.Type == TodoType.Task)">Tasks only</option>
+            <option value="@TodoType.Bug" selected="@(Model.Type == TodoType.Bug)">Bugs only</option>
+        </select>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="mine" value="true" id="mine" checked="@Model.MineOnly" onchange="this.form.submit()" />
+            <label class="form-check-label" for="mine">Assigned to me</label>
+        </div>
+    </form>
+    <span class="text-muted small ms-auto">
+        @if (a.IsReadOnly) { <text>Archived projects can't be changed.</text> }
+        else { <i class="bi bi-arrows-move me-1"></i><text>Drag a card to change its status.</text> }
+    </span>
+</div>
+
+@Html.AntiForgeryToken()
+<div class="pm-board" id="board" data-move-url="@Url.Action("Move", "Todos", new { id = 0 })">
+    @foreach (var col in columns)
+    {
+        var cards = Model.Todos.Where(t => t.Status == col.Status).ToList();
+        <section class="pm-board-col" data-status="@col.Status" aria-label="@col.Label">
+            <header class="pm-board-col-head">
+                <span class="fw-semibold">@col.Label</span>
+                <span class="count badge badge-soft-secondary">@cards.Count</span>
+                <small class="d-block text-muted w-100">@col.Hint</small>
+            </header>
+            <div class="pm-board-list">
+                @foreach (var t in cards)
+                {
+                    var allowed = a.AllowedMoves(t);
+                    <article class="pm-board-card" data-id="@t.Id" data-allowed="@string.Join(",", allowed)" draggable="@(allowed.Count > 0 ? "true" : "false")">
+                        <div class="d-flex gap-1 mb-1 flex-wrap">
+                            <span class="badge @Ui.TypeBadge(t.Type)"><i class="bi @Ui.TypeIcon(t.Type)"></i> @t.Type</span>
+                            <span class="badge @Ui.PriorityBadge(t.Priority)">@t.Priority</span>
+                        </div>
+                        <a class="pm-todo-title d-block mb-2" asp-controller="Todos" asp-action="Details" asp-route-id="@t.Id">@t.Title</a>
+                        <div class="d-flex align-items-center justify-content-between small text-muted">
+                            <span class="@(Ui.IsOverdue(t) ? "pm-overdue" : "")">
+                                @if (t.DueDate is not null) { <i class="bi bi-calendar-event me-1"></i>@t.DueDate.Value.ToString("dd MMM") }
+                            </span>
+                            <span class="d-flex align-items-center gap-2">
+                                @if (t.Comments.Count > 0) { <span><i class="bi bi-chat-left-text"></i> @t.Comments.Count</span> }
+                                <partial name="_Avatar" model="t.Assignee" />
+                            </span>
+                        </div>
+                    </article>
+                }
+            </div>
+        </section>
+    }
+</div>
+<div id="boardMsg" class="alert alert-danger mt-3 d-none" role="alert"></div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var board = document.getElementById('board');
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            var msg = document.getElementById('boardMsg');
+            var dragged = null;
+
+            function allowedFor(card) { return (card.dataset.allowed || '').split(',').filter(Boolean); }
+            function updateCounts() {
+                board.querySelectorAll('.pm-board-col').forEach(function (col) {
+                    col.querySelector('.count').textContent = col.querySelectorAll('.pm-board-card').length;
+                });
+            }
+
+            board.addEventListener('dragstart', function (e) {
+                var card = e.target.closest('.pm-board-card');
+                if (!card || card.getAttribute('draggable') !== 'true') return;
+                dragged = card;
+                card.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', card.dataset.id);
+                var ok = allowedFor(card);
+                board.querySelectorAll('.pm-board-col').forEach(function (col) {
+                    col.classList.toggle('can-drop', ok.indexOf(col.dataset.status) >= 0);
+                });
+            });
+            board.addEventListener('dragend', function () {
+                if (dragged) dragged.classList.remove('dragging');
+                dragged = null;
+                board.querySelectorAll('.pm-board-col').forEach(function (c) { c.classList.remove('can-drop', 'drop-hover'); });
+            });
+            board.addEventListener('dragover', function (e) {
+                var col = e.target.closest('.pm-board-col');
+                if (!dragged || !col || !col.classList.contains('can-drop')) return;
+                e.preventDefault();
+                col.classList.add('drop-hover');
+            });
+            board.addEventListener('dragleave', function (e) {
+                var col = e.target.closest('.pm-board-col');
+                if (col && !col.contains(e.relatedTarget)) col.classList.remove('drop-hover');
+            });
+            board.addEventListener('drop', function (e) {
+                var col = e.target.closest('.pm-board-col');
+                if (!dragged || !col || !col.classList.contains('can-drop')) return;
+                e.preventDefault();
+                var card = dragged, from = card.parentElement, status = col.dataset.status;
+                col.querySelector('.pm-board-list').prepend(card);
+                updateCounts();
+
+                var url = board.dataset.moveUrl.replace(/\/0$/, '/' + card.dataset.id);
+                fetch(url, {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': token, 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'status=' + encodeURIComponent(status)
+                }).then(function (r) {
+                    return r.json().catch(function () { return {}; }).then(function (data) {
+                        if (!r.ok) throw new Error(data.error || 'The change was not saved.');
+                        card.dataset.allowed = (data.allowed || []).join(',');
+                        card.setAttribute('draggable', data.allowed && data.allowed.length ? 'true' : 'false');
+                        msg.classList.add('d-none');
+                    });
+                }).catch(function (err) {
+                    from.prepend(card);   // put it back
+                    updateCounts();
+                    msg.textContent = err.message;
+                    msg.classList.remove('d-none');
+                });
+            });
+        })();
+    </script>
+}

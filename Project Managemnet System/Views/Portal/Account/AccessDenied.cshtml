@@ -1,0 +1,10 @@
+@{
+    ViewData["Title"] = "Access denied";
+    Layout = User.Identity?.IsAuthenticated == true ? "/Views/Shared/_Layout.cshtml" : "/Views/Shared/_AuthLayout.cshtml";
+}
+<div class="pm-empty">
+    <i class="bi bi-shield-x"></i>
+    <h2 class="h4 text-body">You don't have access to that page</h2>
+    <p>Ask a project owner or the Super Admin if you think you should.</p>
+    <a class="btn btn-primary" asp-area="" asp-controller="Dashboard" asp-action="Index">Go to the dashboard</a>
+</div>

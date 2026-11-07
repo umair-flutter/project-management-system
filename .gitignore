@@ -1,0 +1,33 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.dll
+*.exe
+*.pdb
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+
+# Claude Code local settings
+.claude/
+
+# Runtime data created by the app (uploads, attachments, development emails)
+**/App_Data/*
+!**/App_Data/.keep
+**/wwwroot/uploads/
+
+# Local secrets and environment overrides
+appsettings.*.local.json
+*.env
+.env*
+
+# OS files
+Thumbs.db
+.DS_Store

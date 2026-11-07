@@ -1,0 +1,45 @@
+@model LoginVm
+@{
+    Layout = "/Views/Shared/_AuthLayout.cshtml";
+    ViewData["Title"] = "Sign in";
+    var isAdminPortal = string.Equals(ViewContext.RouteData.Values["area"] as string, "Admin", StringComparison.OrdinalIgnoreCase);
+}
+<span class="badge badge-soft-primary mb-3">@ViewBag.PortalTitle</span>
+<h2 class="fw-bold mb-1">Welcome back</h2>
+<p class="text-muted mb-4">Sign in to continue to your projects.</p>
+
+<form method="post" asp-action="Login">
+    <input type="hidden" asp-for="ReturnUrl" />
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+    <div class="mb-3">
+        <label asp-for="Email" class="form-label"></label>
+        <input asp-for="Email" class="form-control form-control-lg" autocomplete="username" autofocus />
+        <span asp-validation-for="Email" class="text-danger small"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Password" class="form-label"></label>
+        <input asp-for="Password" class="form-control form-control-lg" autocomplete="current-password" />
+        <span asp-validation-for="Password" class="text-danger small"></span>
+    </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="form-check">
+            <input asp-for="RememberMe" class="form-check-input" />
+            <label asp-for="RememberMe" class="form-check-label"></label>
+        </div>
+        <a class="small" asp-area="" asp-action="ForgotPassword" asp-controller="Account">Forgot password?</a>
+    </div>
+    <button type="submit" class="btn btn-primary btn-lg w-100">Sign in</button>
+</form>
+
+<p class="text-center text-muted small mt-4 mb-0">
+    @if (isAdminPortal)
+    {
+        <text>Team member? <a asp-area="" asp-controller="Account" asp-action="Login">Go to the member portal</a></text>
+    }
+    else
+    {
+        <text>Project owner? <a asp-area="Admin" asp-controller="Account" asp-action="Login">Go to the admin portal</a></text>
+    }
+</p>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

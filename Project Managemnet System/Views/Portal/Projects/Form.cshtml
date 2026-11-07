@@ -1,0 +1,58 @@
+@model ProjectFormVm
+@{
+    var isEdit = Model.Id is not null;
+    ViewData["Title"] = isEdit ? "Edit project" : "Add new project";
+}
+<div class="mb-4">
+    <a class="small" asp-action="@(isEdit ? "Details" : "Index")" asp-route-id="@Model.Id"><i class="bi bi-arrow-left"></i> Back</a>
+    <h1 class="pm-page-title mt-1">@ViewData["Title"]</h1>
+</div>
+
+<div class="pm-card" style="max-width:760px">
+    <div class="pm-card-body">
+        <form method="post" enctype="multipart/form-data" asp-action="@(isEdit ? "Edit" : "Create")" asp-route-id="@Model.Id">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label"></label>
+                <input asp-for="Name" class="form-control" placeholder="e.g. Customer portal" />
+                <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Icon" class="form-label"></label>
+                <div class="d-flex align-items-center gap-3">
+                    @if (!string.IsNullOrEmpty(Model.ExistingIconPath))
+                    {
+                        <img src="@Model.ExistingIconPath" class="pm-project-icon" alt="Current icon" />
+                    }
+                    <input asp-for="Icon" type="file" class="form-control" accept=".png,.jpg,.jpeg,.gif,.webp" />
+                </div>
+                <div class="form-text">PNG, JPG, GIF, or WebP, up to 2 MB. Without one, the project's initials are shown.</div>
+                @if (!string.IsNullOrEmpty(Model.ExistingIconPath))
+                {
+                    <div class="form-check mt-2">
+                        <input asp-for="RemoveIcon" class="form-check-input" />
+                        <label asp-for="RemoveIcon" class="form-check-label">Remove the current icon</label>
+                    </div>
+                }
+                <span asp-validation-for="Icon" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="5" placeholder="What is this project about?"></textarea>
+            </div>
+            @if (!isEdit)
+            {
+                <div class="mb-4">
+                    <label asp-for="MemberEmails" class="form-label"></label>
+                    <textarea asp-for="MemberEmails" class="form-control" rows="3" placeholder="dev@example.com, designer@example.com"></textarea>
+                    <div class="form-text">Separate emails with commas or new lines. People without an account get an email invitation with a link to sign up. You can make someone a project admin later from the team page.</div>
+                </div>
+            }
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" type="submit">@(isEdit ? "Save changes" : "Create project")</button>
+                <a class="btn btn-light" asp-action="@(isEdit ? "Details" : "Index")" asp-route-id="@Model.Id">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

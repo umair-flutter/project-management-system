@@ -1,0 +1,169 @@
+@model TodoDetailsVm
+@{
+    var t = Model.Todo;
+    var a = Model.Access;
+    ViewData["Title"] = t.Title;
+    // Comment files also carry TodoItemId; only show the to-do's own files up here.
+    var ownFiles = t.Attachments.Where(f => f.TodoCommentId == null).ToList();
+}
+<div class="mb-3">
+    <a class="small" asp-controller="Projects" asp-action="Details" asp-route-id="@t.ProjectId"><i class="bi bi-arrow-left"></i> @a.Project.Name</a>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="pm-card mb-3">
+            <div class="pm-card-body">
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                    <span class="badge @Ui.TypeBadge(t.Type)"><i class="bi @Ui.TypeIcon(t.Type) me-1"></i>@t.Type</span>
+                    <span class="badge @Ui.PriorityBadge(t.Priority)">@t.Priority priority</span>
+                    <span class="badge @Ui.StatusBadge(t.Status)">@Ui.StatusLabel(t.Status)</span>
+                    @if (Ui.IsOverdue(t)) { <span class="badge badge-soft-danger"><i class="bi bi-alarm me-1"></i>Overdue</span> }
+                </div>
+                <h1 class="pm-page-title mb-3 @(t.Status != TodoStatus.Incomplete ? "text-decoration-line-through text-muted" : "")">@t.Title</h1>
+                @if (string.IsNullOrWhiteSpace(t.Description))
+                {
+                    <p class="text-muted fst-italic mb-0">No description.</p>
+                }
+                else
+                {
+                    <div style="white-space:pre-wrap">@t.Description</div>
+                }
+                @if (ownFiles.Count > 0)
+                {
+                    <div class="mt-3">
+                        @foreach (var f in ownFiles)
+                        {
+                            <span class="pm-file-wrap">
+                                <a class="pm-file" href="@Url.Action("Download", "Attachments", new { area = "", id = f.Id })"><i class="bi bi-paperclip"></i>@f.FileName <small class="text-muted">@Ui.FileSize(f.Size)</small></a>
+                                @if (!a.IsReadOnly && (a.CanManage || f.UploadedById == a.UserId))
+                                {
+                                    <form method="post" asp-action="DeleteAttachment" asp-route-id="@t.Id" class="d-inline" onsubmit="return confirm('Remove this file?');">
+                                        <input type="hidden" name="fileId" value="@f.Id" />
+                                        <button class="pm-file-remove" type="submit" title="Remove file" aria-label="Remove @f.FileName"><i class="bi bi-x"></i></button>
+                                    </form>
+                                }
+                            </span>
+                        }
+                    </div>
+                }
+                <div class="d-flex flex-wrap gap-2 mt-4">
+                    <partial name="_StatusButtons" model="t" view-data='new ViewDataDictionary(ViewData) { { "Access", a } }' />
+                    @if (a.CanManage && !a.IsReadOnly)
+                    {
+                        <a class="btn btn-light" asp-action="Edit" asp-route-id="@t.Id"><i class="bi bi-pencil me-1"></i>Edit</a>
+                        <form method="post" asp-action="Delete" asp-route-id="@t.Id" class="d-inline" onsubmit="return confirm('Delete this to-do with its comments and files?');">
+                            <button class="btn btn-outline-danger" type="submit"><i class="bi bi-trash me-1"></i>Delete</button>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="pm-card">
+            <div class="pm-card-header"><h2>Comments <span class="text-muted fw-normal">(@t.Comments.Count)</span></h2></div>
+            <div class="pm-card-body pt-0">
+                @if (t.Comments.Count == 0)
+                {
+                    <p class="text-muted pt-3 mb-0">No comments yet. Use comments to send instructions, files, and updates to the assignee.</p>
+                }
+                @foreach (var c in t.Comments)
+                {
+                    <div class="pm-comment" id="comment-@c.Id">
+                        <partial name="_Avatar" model="c.Author" view-data='new ViewDataDictionary(ViewData) { { "Size", "pm-avatar-lg" } }' />
+                        <div class="flex-grow-1 min-w-0">
+                            @{
+                                var mineComment = c.AuthorId == a.UserId;
+                                var canDelete = !a.IsReadOnly && (mineComment || a.CanManage);
+                            }
+                            <div class="d-flex align-items-start gap-2">
+                                <div class="flex-grow-1">
+                                    <span class="fw-semibold">@c.Author?.FullName</span>
+                                    <small class="text-muted ms-1">@c.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")@(c.EditedAt is not null ? " · edited" : "")</small>
+                                </div>
+                                @if (canDelete)
+                                {
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-link text-muted p-0" data-bs-toggle="dropdown" aria-label="Comment options"><i class="bi bi-three-dots"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            @if (mineComment && !a.IsReadOnly)
+                                            {
+                                                <li><button class="dropdown-item" type="button" data-bs-toggle="collapse" data-bs-target="#edit-@c.Id"><i class="bi bi-pencil me-2"></i>Edit</button></li>
+                                            }
+                                            <li>
+                                                <form method="post" asp-action="DeleteComment" asp-route-id="@t.Id" onsubmit="return confirm('Delete this comment and its files?');">
+                                                    <input type="hidden" name="commentId" value="@c.Id" />
+                                                    <button class="dropdown-item text-danger" type="submit"><i class="bi bi-trash me-2"></i>Delete</button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                }
+                            </div>
+                            @if (!string.IsNullOrEmpty(c.Body)) { <p class="pm-comment-body">@c.Body</p> }
+                            @if (mineComment && !a.IsReadOnly)
+                            {
+                                <form method="post" asp-action="EditComment" asp-route-id="@t.Id" class="collapse mt-2" id="edit-@c.Id">
+                                    <input type="hidden" name="commentId" value="@c.Id" />
+                                    <textarea name="body" class="form-control mb-2" rows="3" aria-label="Edit comment">@c.Body</textarea>
+                                    <button class="btn btn-sm btn-primary" type="submit">Save</button>
+                                    <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#edit-@c.Id">Cancel</button>
+                                </form>
+                            }
+                            @foreach (var f in c.Attachments)
+                            {
+                                <a class="pm-file" href="@Url.Action("Download", "Attachments", new { area = "", id = f.Id })"><i class="bi bi-paperclip"></i>@f.FileName <small class="text-muted">@Ui.FileSize(f.Size)</small></a>
+                            }
+                        </div>
+                    </div>
+                }
+                @if (a.IsReadOnly)
+                {
+                    <p class="text-muted small mt-3 mb-0 border-top pt-3"><i class="bi bi-archive me-1"></i>This project is archived, so new comments are turned off.</p>
+                }
+                else
+                {
+                <form method="post" enctype="multipart/form-data" asp-action="Comment" asp-route-id="@t.Id" class="mt-3 border-top pt-3">
+                    <label for="body" class="form-label">Add a comment</label>
+                    <textarea id="body" name="body" class="form-control mb-2" rows="3" placeholder="Write an update or instructions…"></textarea>
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <input type="file" name="attachments" multiple class="form-control" style="max-width:360px" aria-label="Attach files" />
+                        <button class="btn btn-primary ms-auto" type="submit"><i class="bi bi-send me-1"></i>Post comment</button>
+                    </div>
+                </form>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="pm-card">
+            <div class="pm-card-body">
+                <dl class="pm-meta mb-0">
+                    <dt>Assigned to</dt>
+                    <dd class="d-flex align-items-center gap-2"><partial name="_Avatar" model="t.Assignee" /> @(t.Assignee?.FullName ?? "Unassigned")</dd>
+                    <dt>Start date</dt>
+                    <dd>@(t.StartDate?.ToString("dd MMM yyyy") ?? "—")</dd>
+                    <dt>Due date</dt>
+                    <dd class="@(Ui.IsOverdue(t) ? "pm-overdue" : "")">@(t.DueDate?.ToString("dd MMM yyyy") ?? "—")</dd>
+                    <dt>Created by</dt>
+                    <dd>@t.CreatedBy?.FullName · @t.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</dd>
+                    @if (t.CompletedAt is not null)
+                    {
+                        <dt>Completed</dt>
+                        <dd>@t.CompletedAt.Value.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</dd>
+                    }
+                    @if (t.FinishedAt is not null)
+                    {
+                        <dt>Finished</dt>
+                        <dd class="mb-0">@t.FinishedAt.Value.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+        <p class="small text-muted mt-3 px-1">
+            <strong>How status works:</strong> the assignee marks a to-do <em>complete</em> when they're done.
+            The owner or a project admin then <em>finishes</em> it to confirm and close it, or reopens it.
+        </p>
+    </div>
+</div>

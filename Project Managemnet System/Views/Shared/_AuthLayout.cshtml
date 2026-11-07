@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · ProjectDesk</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="pm-auth">
+        <section class="pm-auth-art">
+            <div class="pm-brand p-0"><span class="pm-brand-mark"><i class="bi bi-kanban"></i></span> ProjectDesk</div>
+            <div>
+                <h1>Plan the work, assign it, and watch it get done.</h1>
+                <p>Projects, tasks and bugs, priorities, files, and comments for your whole team in one place.</p>
+            </div>
+            <small class="text-white-50">&copy; @DateTime.Now.Year ProjectDesk</small>
+        </section>
+        <section class="pm-auth-form">
+            <div class="pm-auth-box">
+                <partial name="_Flash" />
+                @RenderBody()
+            </div>
+        </section>
+    </div>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

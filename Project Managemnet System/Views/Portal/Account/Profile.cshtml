@@ -1,0 +1,64 @@
+@model ProfileVm
+@{
+    ViewData["Title"] = "My profile";
+}
+<div class="mb-4">
+    <h1 class="pm-page-title">My profile</h1>
+    <p class="pm-page-sub">How you appear to your team.</p>
+</div>
+
+<div class="pm-card" style="max-width:620px">
+    <div class="pm-card-body">
+        <form method="post" enctype="multipart/form-data" asp-action="Profile">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            <div class="d-flex align-items-center gap-3 mb-4">
+                @if (!string.IsNullOrEmpty(Model.AvatarPath))
+                {
+                    <img src="@Model.AvatarPath" alt="Your photo" class="pm-avatar pm-avatar-xl" />
+                }
+                else
+                {
+                    <span class="pm-avatar pm-avatar-xl" style="background:@Ui.AvatarColor(User.GetUserId())">@Ui.Initials(Model.FullName)</span>
+                }
+                <div>
+                    <div class="fw-semibold fs-5">@Model.FullName</div>
+                    <div class="text-muted">@Model.Email · @(Model.Role == Roles.SuperAdmin ? "Super Admin" : Model.Role)</div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="FullName" class="form-label"></label>
+                <input asp-for="FullName" class="form-control" />
+                <span asp-validation-for="FullName" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="email">Email</label>
+                <input id="email" class="form-control" value="@Model.Email" disabled />
+                <div class="form-text">Ask an admin if your email needs to change.</div>
+            </div>
+            <div class="mb-4">
+                <label asp-for="Avatar" class="form-label"></label>
+                <input asp-for="Avatar" type="file" class="form-control" accept=".png,.jpg,.jpeg,.gif,.webp" />
+                <div class="form-text">A square PNG, JPG, GIF, or WebP image, up to 2 MB.</div>
+                <span asp-validation-for="Avatar" class="text-danger small"></span>
+                @if (!string.IsNullOrEmpty(Model.AvatarPath))
+                {
+                    <div class="form-check mt-2">
+                        <input asp-for="RemoveAvatar" class="form-check-input" />
+                        <label asp-for="RemoveAvatar" class="form-check-label">Remove my photo</label>
+                    </div>
+                }
+            </div>
+            <div class="form-check form-switch mb-4">
+                <input asp-for="EmailNotifications" class="form-check-input" role="switch" />
+                <label asp-for="EmailNotifications" class="form-check-label"></label>
+                <div class="form-text">Assignments, comments, status changes, and due-date reminders you haven't already seen here are sent to @Model.Email.</div>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" type="submit">Save profile</button>
+                <a class="btn btn-light" asp-action="ChangePassword">Change password</a>
+            </div>
+        </form>
+    </div>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -1,0 +1,16 @@
+@model ApplicationUser?
+@{
+    var size = ViewData["Size"] as string ?? "";
+}
+@if (Model is null)
+{
+    <span class="pm-avatar @size" style="background:#cbd5e1" title="Unassigned"><i class="bi bi-person"></i></span>
+}
+else if (!string.IsNullOrEmpty(Model.AvatarPath))
+{
+    <img class="pm-avatar @size" src="@Model.AvatarPath" alt="@Model.FullName" title="@Model.FullName" />
+}
+else
+{
+    <span class="pm-avatar @size" style="background:@Ui.AvatarColor(Model.Id)" title="@Model.FullName">@Ui.Initials(Model.FullName)</span>
+}

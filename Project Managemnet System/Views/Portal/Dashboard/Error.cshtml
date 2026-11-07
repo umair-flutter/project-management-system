@@ -1,0 +1,10 @@
+@{
+    ViewData["Title"] = "Something went wrong";
+    Layout = User.Identity?.IsAuthenticated == true ? "/Views/Shared/_Layout.cshtml" : "/Views/Shared/_AuthLayout.cshtml";
+}
+<div class="pm-empty">
+    <i class="bi bi-exclamation-octagon"></i>
+    <h2 class="h4 text-body">Something went wrong</h2>
+    <p>The error was logged. Try again, or go back to the dashboard.</p>
+    <a class="btn btn-primary" asp-area="" asp-controller="Dashboard" asp-action="Index">Go to the dashboard</a>
+</div>

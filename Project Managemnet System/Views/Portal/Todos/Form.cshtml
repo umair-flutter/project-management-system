@@ -1,0 +1,97 @@
+@model TodoFormVm
+@{
+    var isEdit = Model.Id is not null;
+    var noun = Model.Type == TodoType.Bug ? "bug" : "task";
+    ViewData["Title"] = isEdit ? $"Edit {noun}" : (Model.Type == TodoType.Bug ? "Report a bug" : "Add a task");
+}
+<div class="mb-4">
+    @if (isEdit)
+    {
+        <a class="small" asp-action="Details" asp-route-id="@Model.Id"><i class="bi bi-arrow-left"></i> Back to the @noun</a>
+    }
+    else
+    {
+        <a class="small" asp-controller="Projects" asp-action="Details" asp-route-id="@Model.ProjectId"><i class="bi bi-arrow-left"></i> Back to @Model.Project?.Name</a>
+    }
+    <h1 class="pm-page-title mt-1">@ViewData["Title"]</h1>
+    <p class="pm-page-sub">@Model.Project?.Name</p>
+</div>
+
+<div class="pm-card" style="max-width:860px">
+    <div class="pm-card-body">
+        <form method="post" enctype="multipart/form-data" asp-action="@(isEdit ? "Edit" : "Create")" asp-route-id="@Model.Id">
+            <input type="hidden" asp-for="ProjectId" />
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+
+            <div class="mb-3">
+                <label asp-for="Title" class="form-label"></label>
+                <input asp-for="Title" class="form-control" placeholder="@(Model.Type == TodoType.Bug ? "What's broken?" : "What needs doing?")" />
+                <span asp-validation-for="Title" class="text-danger small"></span>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-sm-4">
+                    <label asp-for="Type" class="form-label"></label>
+                    <select asp-for="Type" asp-items="Html.GetEnumSelectList<TodoType>()" class="form-select"></select>
+                </div>
+                <div class="col-sm-4">
+                    <label asp-for="Priority" class="form-label"></label>
+                    <select asp-for="Priority" class="form-select">
+                        <option value="@TodoPriority.High">High</option>
+                        <option value="@TodoPriority.Medium">Medium</option>
+                        <option value="@TodoPriority.Low">Low</option>
+                    </select>
+                </div>
+                <div class="col-sm-4">
+                    <label asp-for="AssigneeId" class="form-label"></label>
+                    <select asp-for="AssigneeId" class="form-select">
+                        <option value="">Unassigned</option>
+                        @foreach (var u in Model.Assignables)
+                        {
+                            <option value="@u.Id">@u.FullName</option>
+                        }
+                    </select>
+                    <span asp-validation-for="AssigneeId" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label asp-for="StartDate" class="form-label"></label>
+                    <input asp-for="StartDate" type="date" class="form-control" />
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="DueDate" class="form-label"></label>
+                    <input asp-for="DueDate" type="date" class="form-control" />
+                    <span asp-validation-for="DueDate" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="6"
+                          placeholder="@(Model.Type == TodoType.Bug ? "Steps to reproduce, what you expected, and what happened instead." : "Details, acceptance criteria, links…")"></textarea>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Files" class="form-label"></label>
+                <input asp-for="Files" type="file" multiple class="form-control" />
+                <div class="form-text">Up to 20 MB per file.@(isEdit ? " New files are added to the ones already attached." : "")</div>
+                <span asp-validation-for="Files" class="text-danger small"></span>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" type="submit">@(isEdit ? "Save changes" : $"Add {noun}")</button>
+                @if (isEdit)
+                {
+                    <a class="btn btn-light" asp-action="Details" asp-route-id="@Model.Id">Cancel</a>
+                }
+                else
+                {
+                    <a class="btn btn-light" asp-controller="Projects" asp-action="Details" asp-route-id="@Model.ProjectId">Cancel</a>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

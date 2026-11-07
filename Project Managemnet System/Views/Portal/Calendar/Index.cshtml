@@ -1,0 +1,61 @@
+@model CalendarVm
+@{
+    ViewData["Title"] = "Calendar";
+}
+<div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+    <div>
+        <h1 class="pm-page-title">Calendar</h1>
+        <p class="pm-page-sub">Scheduled to-dos by day, week, month, and year. Each bar runs from the start date to the due date.</p>
+    </div>
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
+        <select name="projectId" class="form-select" style="width:auto" onchange="this.form.submit()" aria-label="Project">
+            <option value="">All projects</option>
+            @foreach (var p in Model.Projects)
+            {
+                <option value="@p.Id" selected="@(Model.ProjectId == p.Id)">@p.Name</option>
+            }
+        </select>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="mine" value="true" id="mine" checked="@Model.MineOnly" onchange="this.form.submit()" />
+            <label class="form-check-label" for="mine">Assigned to me</label>
+        </div>
+    </form>
+</div>
+
+<div class="pm-card">
+    <div class="pm-card-body">
+        <div class="d-flex flex-wrap gap-3 small text-muted mb-3">
+            <span><span class="pm-dot" style="background:#dc2626"></span>High</span>
+            <span><span class="pm-dot" style="background:#d97706"></span>Medium</span>
+            <span><span class="pm-dot" style="background:#059669"></span>Low</span>
+            <span><span class="pm-dot" style="background:#94a3b8"></span>Completed or finished</span>
+        </div>
+        <div id="calendar"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var params = new URLSearchParams();
+            @if (Model.ProjectId is not null) { <text>params.set('projectId', '@Model.ProjectId');</text> }
+            @if (Model.MineOnly) { <text>params.set('mine', 'true');</text> }
+
+            var calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+                initialView: window.innerWidth < 768 ? 'listMonth' : 'dayGridMonth',
+                firstDay: 1,
+                height: 'auto',
+                dayMaxEvents: 4,
+                headerToolbar: { left: 'prev,next today', center: 'title', right: 'multiMonthYear,dayGridMonth,dayGridWeek,dayGridDay,listMonth' },
+                buttonText: { today: 'Today', year: 'Year', month: 'Month', week: 'Week', day: 'Day', list: 'List' },
+                events: { url: '@Url.Action("Events")?' + params.toString(), failure: function () { alert('Could not load the calendar. Try refreshing the page.'); } },
+                eventDidMount: function (info) {
+                    var p = info.event.extendedProps;
+                    info.el.title = info.event.title + '\n' + p.project + ' · ' + p.assignee + '\n' + p.priority + ' priority · ' + p.status + ' · due ' + p.due;
+                }
+            });
+            calendar.render();
+        });
+    </script>
+}

@@ -1,0 +1,69 @@
+@model SearchVm
+@{
+    ViewData["Title"] = string.IsNullOrEmpty(Model.Query) ? "Search" : $"Search: {Model.Query}";
+}
+<div class="mb-4">
+    <h1 class="pm-page-title">Search</h1>
+    <form method="get" class="d-flex gap-2 mt-2" style="max-width:560px" role="search">
+        <input name="q" value="@Model.Query" class="form-control" placeholder="Project name, to-do title, or words in a description" aria-label="Search" autofocus />
+        <button class="btn btn-primary" type="submit">Search</button>
+    </form>
+</div>
+
+@if (string.IsNullOrEmpty(Model.Query) || Model.Query.Length < 2)
+{
+    <div class="pm-card pm-empty"><i class="bi bi-search"></i>Type at least 2 characters to search your projects and to-dos.</div>
+}
+else
+{
+    <div class="pm-card mb-3">
+        <div class="pm-card-header"><h2>Projects <span class="text-muted fw-normal">(@Model.Projects.Count)</span></h2></div>
+        @if (Model.Projects.Count == 0)
+        {
+            <div class="text-muted p-3">No projects match.</div>
+        }
+        else
+        {
+            <div class="list-group list-group-flush">
+                @foreach (var p in Model.Projects)
+                {
+                    <a class="list-group-item list-group-item-action d-flex align-items-center gap-3" asp-controller="Projects" asp-action="Details" asp-route-id="@p.Id">
+                        <partial name="_ProjectIcon" model="p" />
+                        <span class="flex-grow-1 min-w-0">
+                            <span class="fw-semibold d-block">@p.Name @if (p.IsArchived) { <span class="badge badge-soft-secondary ms-1">Archived</span> }</span>
+                            <small class="text-muted text-truncate d-block">@p.Description</small>
+                        </span>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="pm-card">
+        <div class="pm-card-header"><h2>To-dos <span class="text-muted fw-normal">(@Model.Todos.Count@(Model.Todos.Count == 50 ? "+" : ""))</span></h2></div>
+        @if (Model.Todos.Count == 0)
+        {
+            <div class="text-muted p-3">No to-dos match.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table pm-table">
+                    <thead><tr><th>To-do</th><th>Project</th><th>Priority</th><th>Assigned to</th><th>Status</th></tr></thead>
+                    <tbody>
+                        @foreach (var t in Model.Todos)
+                        {
+                            <tr>
+                                <td style="min-width:220px"><i class="bi @Ui.TypeIcon(t.Type) text-muted me-1"></i><a class="pm-todo-title" asp-controller="Todos" asp-action="Details" asp-route-id="@t.Id">@t.Title</a></td>
+                                <td>@t.Project?.Name</td>
+                                <td><span class="badge @Ui.PriorityBadge(t.Priority)">@t.Priority</span></td>
+                                <td>@(t.Assignee?.FullName ?? "Unassigned")</td>
+                                <td><span class="badge @Ui.StatusBadge(t.Status)">@Ui.StatusLabel(t.Status)</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}
