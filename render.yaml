@@ -1,0 +1,23 @@
+# Render Blueprint: Dashboard -> New -> Blueprint -> pick this repository.
+# Keys marked "sync: false" are asked for once in the Render dashboard (never commit real passwords).
+services:
+  - type: web
+    name: project-management-system
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /Account/Login
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: Seed__SuperAdmin__Email
+        value: "superadmin@demo.local"
+      - key: Seed__SuperAdmin__FullName
+        value: "Super Admin"
+      - key: Seed__SuperAdmin__Password
+        sync: false
+      - key: Seed__DemoData
+        value: "true"
+      - key: Seed__DemoPassword
+        sync: false

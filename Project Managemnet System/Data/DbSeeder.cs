@@ -22,7 +22,8 @@ public static class DbSeeder
         var roles = sp.GetRequiredService<RoleManager<IdentityRole>>();
         var log = sp.GetRequiredService<ILoggerFactory>().CreateLogger("DbSeeder");
 
-        await db.Database.MigrateAsync();
+        // SQL Server uses migrations; the SQLite demo database is created straight from the model.
+        if (db.Database.IsSqlite()) await db.Database.EnsureCreatedAsync(); else await db.Database.MigrateAsync();
 
         foreach (var role in Roles.All)
             if (!await roles.RoleExistsAsync(role))

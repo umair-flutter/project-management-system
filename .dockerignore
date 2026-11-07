@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/.idea/
+**/App_Data/
+**/node_modules/
+**/*.user
+**/*.db
+**/logs/
+.git/
+.claude/
